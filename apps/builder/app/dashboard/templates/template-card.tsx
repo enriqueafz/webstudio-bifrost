@@ -5,6 +5,7 @@ import { builderUrl } from "~/shared/router-utils";
 import { Card, CardContent, CardFooter } from "../shared/card";
 import { ThumbnailWithAbbr, ThumbnailWithImage } from "../shared/thumbnail";
 import { CloneProjectDialog } from "~/shared/clone-project";
+import { PreviewTemplateDialog } from "./preview-template-dialog";
 
 type TemplateCardProps = {
   project: DashboardProject;
@@ -12,6 +13,7 @@ type TemplateCardProps = {
 
 export const TemplateCard = ({ project, ...props }: TemplateCardProps) => {
   const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const { title, previewImageAsset } = project;
   return (
     <Card {...props}>
@@ -38,10 +40,25 @@ export const TemplateCard = ({ project, ...props }: TemplateCardProps) => {
         )}
       </CardContent>
       <CardFooter>
-        <Flex direction="column" justify="around">
+        <Flex direction="column" justify="around" gap="2">
           <Text variant="titles" truncate userSelect="text">
             {title}
           </Text>
+          <Flex gap="2">
+            <Text
+              variant="labels"
+              css={{
+                cursor: "pointer",
+                color: theme.colors.foregroundMain,
+                "&:hover": { textDecoration: "underline" },
+              }}
+              onClick={() => {
+                setIsPreviewDialogOpen(true);
+              }}
+            >
+              Live Preview
+            </Text>
+          </Flex>
         </Flex>
       </CardFooter>
       <CloneProjectDialog
@@ -53,6 +70,15 @@ export const TemplateCard = ({ project, ...props }: TemplateCardProps) => {
             origin: window.origin,
             projectId: projectId,
           });
+        }}
+      />
+      <PreviewTemplateDialog
+        isOpen={isPreviewDialogOpen}
+        onOpenChange={setIsPreviewDialogOpen}
+        project={project}
+        onSelect={() => {
+          setIsPreviewDialogOpen(false);
+          setIsDuplicateDialogOpen(true);
         }}
       />
     </Card>

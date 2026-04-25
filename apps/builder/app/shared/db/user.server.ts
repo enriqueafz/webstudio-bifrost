@@ -6,6 +6,10 @@ import {
 import type { GitHubProfile } from "remix-auth-github";
 import type { GoogleProfile } from "remix-auth-google";
 import { z } from "zod";
+import fs from "fs";
+
+const log = (msg: string) =>
+  fs.appendFileSync("auth_debug.log", `${new Date().toISOString()} - ${msg}\n`);
 
 export type User = Omit<
   Database["public"]["Tables"]["User"]["Row"],
@@ -29,7 +33,7 @@ export const getUserById = async (context: AppContext, id: User["id"]) => {
     .single();
 
   if (dbUser.error) {
-    console.error(dbUser.error);
+    console.error("getUserById error:", dbUser.error);
     throw new Error("User not found");
   }
 
@@ -45,11 +49,18 @@ const genericCreateAccount = async (
     provider: string;
   }
 ): Promise<User> => {
+  log(`genericCreateAccount searching for: ${userData.email}`);
   const dbUser = await context.postgrest.client
     .from("User")
     .select()
     .eq("email", userData.email)
     .single();
+
+  if (dbUser.error) {
+    log(`genericCreateAccount error: ${JSON.stringify(dbUser.error)}`);
+  } else {
+    log(`genericCreateAccount found user: ${dbUser.data.id}`);
+  }
 
   if (dbUser.error == null) {
     // Ensure the user has a default workspace — it may be missing if
@@ -82,7 +93,7 @@ const genericCreateAccount = async (
 
   // https://github.com/PostgREST/postgrest/blob/bfbd033c6e9f38cfbc8b1cfe19ee009a9379e3dd/docs/references/errors.rst#L234
   if (dbUser.error.code !== "PGRST116") {
-    console.error(dbUser.error);
+    console.error("genericCreateAccount select error:", dbUser.error);
     throw new Error("User not found");
   }
 

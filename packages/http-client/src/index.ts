@@ -151,7 +151,7 @@ export const parseBuilderUrl = (urlStr: string) => {
   fragments[0] = fragments[0].replace(re, branch ?? "");
 
   const sourceUrl = new URL(url.origin);
-  sourceUrl.protocol = "https";
+  sourceUrl.protocol = url.protocol;
   sourceUrl.host = fragments.filter(Boolean).join(".");
 
   return {

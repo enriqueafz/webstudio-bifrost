@@ -8,6 +8,7 @@ export {
   createErrorResponse,
 } from "./context/errors.server";
 export * as authorizeProject from "./authorize/project.server";
+export { templateIds } from "./authorize/project.server";
 export type { AuthPermit } from "./authorize/project.server";
 
 export {

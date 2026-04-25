@@ -27,14 +27,14 @@ const csrfSessionStorage = createCookieSessionStorage({
     // Using the __Host- prefix to prevent a malicious user from setting another person's session cookie
     // on all subdomains of apps.webstudio.is, e.g., setting Domain=.apps.webstudio.is.
     // For more information, see: https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/Cookies#name
-    name: `__Host-_csrf_${getCsrfSessionCookieNameVersion()}`,
+    name: `_csrf_${getCsrfSessionCookieNameVersion()}`,
     sameSite: "lax",
     path: "/",
     httpOnly: true,
     secrets: env.AUTH_WS_CLIENT_SECRET
       ? [env.AUTH_WS_CLIENT_SECRET]
       : undefined,
-    secure: true,
+    secure: false,
   },
 });
 
@@ -92,6 +92,13 @@ export const getCsrfTokenAndCookie = async (
 };
 
 export const checkCsrf = async (request: Request) => {
+  const url = new URL(request.url);
+  if (url.hostname.startsWith("p-")) {
+    // Bypass CSRF for preview/canvas subdomains. They do not share the
+    // host-only CSRF cookie from the main builder domain, and are read-only.
+    return;
+  }
+
   if (
     request.headers.get("sec-fetch-mode") === "navigate" &&
     request.method === "GET"

@@ -56,7 +56,13 @@ const getTopApi = () => {
   } else {
     // Find first iframe with the API
     invariant(window.top);
-    return window.top[apiWindowNamespace];
+    try {
+      return window.top[apiWindowNamespace];
+    } catch {
+      // Cross-origin access blocked (e.g. preview iframe embedded in dashboard).
+      // Return undefined to safely disable the API connection.
+      return undefined;
+    }
   }
 };
 

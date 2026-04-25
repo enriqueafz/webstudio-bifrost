@@ -40,7 +40,7 @@ export const preventCrossOriginCookie = (
     return;
   }
 
-  if (throwError) {
+  if (throwError && process.env.NODE_ENV !== "development") {
     console.error(`Cross-origin request to ${request.url} blocked`, [
       ...request.headers.entries(),
     ]);

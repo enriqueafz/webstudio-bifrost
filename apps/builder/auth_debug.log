@@ -1,0 +1,22 @@
+2026-04-25T17:26:03.962Z - genericCreateAccount searching for: admin@bifrost.com
+2026-04-25T17:26:03.968Z - genericCreateAccount error: {"code":"PGRST301","details":"None of the keys was able to decode the JWT","hint":null,"message":"No suitable key or wrong key type"}
+2026-04-25T17:26:32.297Z - genericCreateAccount searching for: admin@bifrost.com
+2026-04-25T17:26:32.305Z - genericCreateAccount error: {"code":"PGRST301","details":"None of the keys was able to decode the JWT","hint":null,"message":"No suitable key or wrong key type"}
+2026-04-25T17:27:01.247Z - genericCreateAccount searching for: admin@bifrost.com
+2026-04-25T17:27:01.256Z - genericCreateAccount error: {"code":"PGRST301","details":"None of the keys was able to decode the JWT","hint":null,"message":"No suitable key or wrong key type"}
+2026-04-25T17:27:19.146Z - genericCreateAccount searching for: admin@bifrost.com
+2026-04-25T17:27:19.151Z - genericCreateAccount error: {"code":"PGRST301","details":"None of the keys was able to decode the JWT","hint":null,"message":"No suitable key or wrong key type"}
+2026-04-25T17:27:46.867Z - genericCreateAccount searching for: admin@bifrost.com
+2026-04-25T17:27:46.901Z - genericCreateAccount found user: admin-user-123
+2026-04-25T17:27:53.680Z - genericCreateAccount searching for: admin@bifrost.com
+2026-04-25T17:27:53.684Z - genericCreateAccount found user: admin-user-123
+2026-04-25T17:28:13.719Z - genericCreateAccount searching for: admin@bifrost.com
+2026-04-25T17:28:13.727Z - genericCreateAccount found user: admin-user-123
+2026-04-25T17:36:15.708Z - genericCreateAccount searching for: admin@bifrost.com
+2026-04-25T17:36:15.725Z - genericCreateAccount found user: admin-user-123
+2026-04-25T17:42:12.742Z - genericCreateAccount searching for: admin@bifrost.com
+2026-04-25T17:42:12.771Z - genericCreateAccount found user: admin-user-123
+2026-04-25T19:23:07.106Z - genericCreateAccount searching for: hello@webstudio.is
+2026-04-25T19:23:07.124Z - genericCreateAccount error: {"code":"PGRST116","details":"The result contains 0 rows","hint":null,"message":"Cannot coerce the result to a single JSON object"}
+2026-04-25T19:53:43.232Z - genericCreateAccount searching for: hello@webstudio.is
+2026-04-25T19:53:43.248Z - genericCreateAccount found user: 332d531f-a3a3-450f-b15a-9e7bf84f77c3

@@ -18,6 +18,7 @@ import { db as authDb } from "@webstudio-is/authorization-token/index.server";
 import {
   AuthorizationError,
   authorizeProject,
+  templateIds,
 } from "@webstudio-is/trpc-interface/index.server";
 import { createContext } from "~/shared/context.server";
 import { getPlanInfo } from "@webstudio-is/plans/index.server";
@@ -57,7 +58,13 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
 export const loader = async (loaderArgs: LoaderFunctionArgs) => {
   const { request } = loaderArgs;
   preventCrossOriginCookie(request);
-  allowedDestinations(request, ["document", "empty"]);
+  // Allow iframe destination for preview mode (e.g. the Live Preview modal in the dashboard)
+  const previewUrl = new URL(request.url);
+  const isPreviewMode = previewUrl.searchParams.get("mode") === "preview";
+  allowedDestinations(
+    request,
+    isPreviewMode ? ["document", "empty", "iframe"] : ["document", "empty"]
+  );
 
   if (isDashboard(request)) {
     throw redirect(dashboardPath());
@@ -82,33 +89,54 @@ export const loader = async (loaderArgs: LoaderFunctionArgs) => {
     throw new AuthorizationError("Service calls are not allowed");
   }
 
-  if (context.authorization.type === "anonymous") {
-    throw await authWsLoader(loaderArgs); // redirect("/auth/ws");
-  }
+  try {
+    const normalizeLocalhost = (u: URL) => {
+      if (
+        u.protocol === "https:" &&
+        (u.hostname === "localhost" || u.hostname.endsWith(".localhost"))
+      ) {
+        u.protocol = "http:";
+      }
+      return u;
+    };
+    const url = normalizeLocalhost(new URL(request.url));
 
-  if (
-    context.authorization.type === "user" &&
-    request.headers.get("sec-fetch-mode") === "navigate"
-  ) {
-    // If logout fails, or the session cookie in the dashboard is deleted or expired,
-    // enforce reauthorization on builder reload or navigation (sec-fetch-mode === 'navigate') after a timeout.
-    const RELOAD_ON_NAVIGATE_TIMEOUT =
-      env.DEPLOYMENT_ENVIRONMENT === "production"
-        ? 1000 * 60 * 60 * 24 * 7 // 1 week
-        : 1000 * 60 * 60 * 1; // 1 hour
+    const { projectId } = parseBuilderUrl(url.href);
+
+    if (context.authorization.type === "anonymous") {
+      console.error(`[DEBUG] Anonymous request for project: ${projectId}`);
+      // Allow anonymous access only for whitelisted templates
+      if (projectId && templateIds.includes(projectId)) {
+        console.error(
+          `[DEBUG] Project ${projectId} is a whitelisted template, bypassing mandatory login.`
+        );
+        // Continue without redirecting to login
+      } else {
+        console.error(
+          `[DEBUG] Project ${projectId} is NOT whitelisted, redirecting to login.`
+        );
+        throw await authWsLoader(loaderArgs);
+      }
+    }
 
     if (
-      Date.now() - context.authorization.sessionCreatedAt >
-      RELOAD_ON_NAVIGATE_TIMEOUT
+      context.authorization.type === "user" &&
+      request.headers.get("sec-fetch-mode") === "navigate"
     ) {
-      throw await authWsLoader(loaderArgs); // start immediately instead of redirect("/auth/ws");
+      // If logout fails, or the session cookie in the dashboard is deleted or expired,
+      // enforce reauthorization on builder reload or navigation (sec-fetch-mode === 'navigate') after a timeout.
+      const RELOAD_ON_NAVIGATE_TIMEOUT =
+        env.DEPLOYMENT_ENVIRONMENT === "production"
+          ? 1000 * 60 * 60 * 24 * 7 // 1 week
+          : 1000 * 60 * 60 * 1; // 1 hour
+
+      if (
+        Date.now() - context.authorization.sessionCreatedAt >
+        RELOAD_ON_NAVIGATE_TIMEOUT
+      ) {
+        throw await authWsLoader(loaderArgs); // start immediately instead of redirect("/auth/ws");
+      }
     }
-  }
-
-  try {
-    const url = new URL(request.url);
-
-    const { projectId } = parseBuilderUrl(request.url);
 
     if (projectId === undefined) {
       throw new Response("Project ID is not defined", {
@@ -120,10 +148,13 @@ export const loader = async (loaderArgs: LoaderFunctionArgs) => {
     const project = await projectApi.loadById(projectId, context);
 
     if (project === null) {
+      console.error(`[DEBUG] Project ${projectId} not found in DB.`);
       throw new Response(`Project "${projectId}" not found`, {
         status: 404,
       });
     }
+
+    console.error(`[DEBUG] Project ${projectId} found, checking permits...`);
 
     const authPermit =
       (await authorizeProject.getProjectPermit(
@@ -157,11 +188,15 @@ export const loader = async (loaderArgs: LoaderFunctionArgs) => {
           )
         : authDb.tokenDefaultPermissions;
 
-    // When the project belongs to a workspace, resolve plan from the workspace owner
-    // so the owner's subscription governs all projects in the workspace
     let role: Role | "own" = "own";
+    const isTemplate = projectId && templateIds.includes(projectId);
 
-    if (project.workspaceId !== null) {
+    if (isTemplate) {
+      console.error(
+        `[DEBUG] Skipping workspace/plan check for whitelisted template ${projectId}`
+      );
+      // Templates use default plan features for preview
+    } else if (project.workspaceId !== null) {
       const currentUserId =
         context.authorization.type === "user"
           ? context.authorization.userId
@@ -181,6 +216,10 @@ export const loader = async (loaderArgs: LoaderFunctionArgs) => {
         .single();
 
       if (workspace.error) {
+        console.error(
+          `[DEBUG] Workspace load error for project ${project.id}:`,
+          workspace.error
+        );
         throw workspace.error;
       }
 
@@ -212,7 +251,7 @@ export const loader = async (loaderArgs: LoaderFunctionArgs) => {
 
     const { planFeatures, purchases } = context;
 
-    if (project.userId === null) {
+    if (project.userId === null && !isTemplate) {
       throw new AuthorizationError("Project must have project userId defined");
     }
 
@@ -244,7 +283,7 @@ export const loader = async (loaderArgs: LoaderFunctionArgs) => {
       // blob: workers can only be created from JS already running in this page, so the
       // attack surface is no wider than allowing eval.
       "Content-Security-Policy",
-      `frame-src ${url.origin}/canvas https://app.goentri.com/ https://help.webstudio.is/; worker-src blob:`
+      `frame-src ${url.origin}/canvas https://app.goentri.com/ https://help.webstudio.is/; worker-src blob: 'self'`
     );
 
     return json(
@@ -264,9 +303,19 @@ export const loader = async (loaderArgs: LoaderFunctionArgs) => {
       }
     );
   } catch (error) {
+    console.error(`[DEBUG] Loader caught error:`, error);
     if (error instanceof AuthorizationError) {
-      // try to re-login user if he has no access to the project
+      console.error(
+        `[DEBUG] AuthorizationError: ${error.message}. Redirecting to /auth/ws`
+      );
       throw redirect(`/auth/ws`);
+    }
+
+    if (error instanceof Response && error.status === 403) {
+      console.error(
+        `[DEBUG] 403 Response thrown. Message:`,
+        await error.text()
+      );
     }
 
     throw error;
@@ -281,10 +330,14 @@ export const loader = async (loaderArgs: LoaderFunctionArgs) => {
  *
  */
 export const headers = ({ loaderHeaders }: HeadersArgs) => {
-  return {
+  const headers: Record<string, string> = {
     "Cache-Control": "no-store",
-    "Content-Security-Policy": loaderHeaders.get("Content-Security-Policy"),
   };
+  const csp = loaderHeaders.get("Content-Security-Policy");
+  if (csp) {
+    headers["Content-Security-Policy"] = csp;
+  }
+  return headers;
 };
 
 const Builder = lazy(async () => {

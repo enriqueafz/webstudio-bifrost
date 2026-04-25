@@ -52,34 +52,41 @@ export const loadById = async (projectId: string, context: AppContext) => {
     throw new AuthorizationError("You don't have access to this project");
   }
 
-  const data = await context.postgrest.client
-    .from("Project")
-    .select(
-      `
-        *,
-        previewImageAsset:Asset (*),
-        latestBuildVirtual(*),
-        latestStaticBuild:LatestStaticBuildPerProject (*),
-        domainsVirtual(*, latestBuildVirtual(*))
-      `
-    )
-    .eq("id", projectId)
-    .eq("isDeleted", false)
-    .single();
+  try {
+    const data = await context.postgrest.client
+      .from("Project")
+      .select(
+        `
+          *,
+          previewImageAsset:Asset (*),
+          latestBuildVirtual(*),
+          latestStaticBuild:LatestStaticBuildPerProject (*),
+          domainsVirtual(*, latestBuildVirtual(*))
+        `
+      )
+      .eq("id", projectId)
+      .eq("isDeleted", false)
+      .single();
 
-  if (data.error) {
-    throw data.error;
+    if (data.error) {
+      console.error(`[DEBUG] Project load error for ${projectId}:`, data.error);
+      throw data.error;
+    }
+    const { latestStaticBuild, ...project } = data.data;
+
+    return {
+      ...project,
+      // postgres marks all view fields as nullable
+      // workaround this by casting to non nullable
+      latestStaticBuild: (latestStaticBuild[0] ??
+        null) as null | SetNonNullable<
+        NonNullable<(typeof latestStaticBuild)[0]>
+      >,
+    };
+  } catch (err) {
+    console.error(`[DEBUG] Caught error in loadById for ${projectId}:`, err);
+    throw err;
   }
-  const { latestStaticBuild, ...project } = data.data;
-
-  return {
-    ...project,
-    // postgres marks all view fields as nullable
-    // workaround this by casting to non nullable
-    latestStaticBuild: (latestStaticBuild[0] ?? null) as null | SetNonNullable<
-      NonNullable<(typeof latestStaticBuild)[0]>
-    >,
-  };
 };
 
 export const create = async (

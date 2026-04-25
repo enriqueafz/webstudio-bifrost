@@ -50,12 +50,20 @@ export const createPubsub = <PublishMap>() => {
   /**
    * Similar to a CSRF token, we use a token to ensure that the postMessage is coming from a trusted source.
    */
-  let token =
-    window.self === window.top ? getRandomToken() : window.top?.[apiTokenKey];
+  let token: string | undefined;
+  try {
+    token =
+      window.self === window.top ? getRandomToken() : window.top?.[apiTokenKey];
 
-  if (window.top) {
-    // Initialize token at the Builder, reset it on the Canvas after reading
-    window.top[apiTokenKey] = window.self === window.top ? token : undefined;
+    if (window.top) {
+      // Initialize token at the Builder, reset it on the Canvas after reading
+      window.top[apiTokenKey] = window.self === window.top ? token : undefined;
+    }
+  } catch {
+    // Cross-origin parent window (e.g. preview iframe embedded in the dashboard).
+    // The token will be overwritten by the dev token below, or remain undefined
+    // which disables cross-frame pubsub — safe for read-only preview mode.
+    token = undefined;
   }
 
   // Use a fixed token in development to handle HMR updates consistently

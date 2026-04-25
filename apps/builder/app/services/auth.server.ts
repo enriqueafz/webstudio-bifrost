@@ -13,6 +13,11 @@ import { staticEnv } from "~/env/env.static.server";
 import type { SessionData } from "./auth.server.utils";
 import { createContext } from "~/shared/context.server";
 
+console.log("INITIALIZING AUTH SERVER:", {
+  DEV_LOGIN: env.DEV_LOGIN,
+  AUTH_SECRET: env.AUTH_SECRET,
+});
+
 const transformRefToAlias = (input: string) => {
   const rawAlias = input.endsWith(".staging") ? input.slice(0, -8) : input;
 
@@ -28,8 +33,8 @@ export const callbackOrigin =
     ? env.DEPLOYMENT_URL
     : env.DEPLOYMENT_ENVIRONMENT === "preview" ||
         env.DEPLOYMENT_ENVIRONMENT === "development"
-      ? `https://${transformRefToAlias(staticEnv.GITHUB_REF_NAME ?? "main")}.${env.DEPLOYMENT_ENVIRONMENT}.webstudio.is`
-      : `https://wstd.dev:${env.PORT || 5173}`;
+      ? `http://${transformRefToAlias(staticEnv.GITHUB_REF_NAME ?? "main")}.${env.DEPLOYMENT_ENVIRONMENT}.webstudio.is`
+      : `http://localhost:${env.PORT || 5173}`;
 
 const strategyCallback = async ({
   profile,
@@ -102,11 +107,18 @@ if (env.DEV_LOGIN === "true") {
           ? emailValue.toString().trim()
           : "hello@webstudio.is";
 
+      console.log("Auth secret check:", {
+        inputSecret: secret,
+        expectedSecret: env.AUTH_SECRET,
+        email,
+      });
+
       if (secret === env.AUTH_SECRET) {
         try {
           const context = await createContext(request);
-
+          console.log("Context created, logging in user...");
           const user = await db.user.createOrLoginWithDev(context, email);
+          console.log("User found/created:", user.id);
           return {
             userId: user.id,
             createdAt: Date.now(),

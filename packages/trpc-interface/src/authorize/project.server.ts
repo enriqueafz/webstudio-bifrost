@@ -27,6 +27,31 @@ const permitToRelationRewrite: Record<TokenAuthPermit, Relation[]> = {
   admin: ["administrators"],
 };
 
+// @todo Delete and use tokens
+export const templateIds = [
+  // Production
+  "5e086cf4-4293-471c-8eab-ddca8b5cd4db",
+  "94e6e1b8-c6c4-485a-9d7a-8282e11920c0",
+  "05954204-fcee-407e-b47f-77a38de74431",
+  "afc162c2-6396-41b7-a855-8fc04604a7b1",
+  "3f260731-825b-486a-b534-e747f0ed6106",
+  "400b1bde-def1-49e0-9b64-e26416d326fa",
+  "2e802ad7-ef32-48e6-8706-3a162785ef95",
+  "01f6f1d8-06f5-4a6c-a3b1-89a0448046c7",
+  "5b33acf4-53cf-4f03-8973-d5679772edee",
+  "909a139b-1f2d-415a-ac90-382fa19fa7d8",
+  "ef82ee51-e4d6-4a69-a4cc-7bf1dee65ed7",
+  "e761178f-6ac6-47f6-b881-56cc75640d73",
+  // Staging IDs
+  "c236999d-be6b-43fb-9edc-78a2ba59e56d",
+  "a1371dce-752c-4ccf-8ea4-88bab577fe50",
+  "6204396c-3f9e-4d29-8d19-ff0f76960a74",
+  // Bifrost Templates
+  "b4535829-6d1f-43dd-9531-68a6713091de", // NOVA
+  "99cbaa36-a471-4575-a1b3-86763f93d666", // BLOOM
+  "8dc8de6e-3d95-4ee7-b071-afb59adb0bf7", // FORGE
+];
+
 /**
  * Pure function: checks whether a set of workspace relations grants a given
  * permit. Used by the auth layer to evaluate workspace-based access.
@@ -148,28 +173,6 @@ export const checkProjectPermit = async ({
     return permit === "view";
   }
 
-  // @todo Delete and use tokens
-  const templateIds = [
-    // Production
-    "5e086cf4-4293-471c-8eab-ddca8b5cd4db",
-    "94e6e1b8-c6c4-485a-9d7a-8282e11920c0",
-    "05954204-fcee-407e-b47f-77a38de74431",
-    "afc162c2-6396-41b7-a855-8fc04604a7b1",
-    "3f260731-825b-486a-b534-e747f0ed6106",
-    "400b1bde-def1-49e0-9b64-e26416d326fa",
-    "2e802ad7-ef32-48e6-8706-3a162785ef95",
-    "01f6f1d8-06f5-4a6c-a3b1-89a0448046c7",
-    "5b33acf4-53cf-4f03-8973-d5679772edee",
-    "909a139b-1f2d-415a-ac90-382fa19fa7d8",
-    "ef82ee51-e4d6-4a69-a4cc-7bf1dee65ed7",
-    "e761178f-6ac6-47f6-b881-56cc75640d73",
-    // Staging IDs
-    "c236999d-be6b-43fb-9edc-78a2ba59e56d",
-    "a1371dce-752c-4ccf-8ea4-88bab577fe50",
-    "6204396c-3f9e-4d29-8d19-ff0f76960a74",
-  ];
-
-  // @todo Delete and use tokens
   if (permit === "view" && templateIds.includes(projectId)) {
     return true;
   }
@@ -266,6 +269,17 @@ export const hasProjectPermit = async (
   const { authorization } = context;
 
   if (authorization.type === "anonymous") {
+    console.error(
+      `[DEBUG] hasProjectPermit: Anonymous user, checking template whitelist for ${props.projectId}`
+    );
+    // Allow anonymous access to whitelisted templates for viewing
+    if (props.permit === "view" && templateIds.includes(props.projectId)) {
+      console.error(`[DEBUG] hasProjectPermit: ALLOWED (template whitelist)`);
+      return true;
+    }
+    console.error(
+      `[DEBUG] hasProjectPermit: DENIED (anonymous & not whitelisted)`
+    );
     return false;
   }
 

@@ -2,13 +2,13 @@ import { createCookie } from "@remix-run/node";
 import { compareUrls } from "~/shared/router-utils";
 
 // https://developer.mozilla.org/en-US/docs/Web/Security/Practical_implementation_guides/Cookies#name
-export const returnToCookie = createCookie("__Host-_returnTo", {
+export const returnToCookie = createCookie("_returnTo", {
   path: "/",
   httpOnly: true,
   sameSite: "lax",
   // Set the expiration to 5 minutes as it is unnecessary to retain the cookie for a longer duration.
   maxAge: 60 * 5,
-  secure: true,
+  secure: false,
 });
 
 export const returnToPath = async (

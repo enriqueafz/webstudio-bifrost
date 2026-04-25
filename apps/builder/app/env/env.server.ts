@@ -142,7 +142,7 @@ if (!parseResult.success) {
 
 const env = {
   ...parseResult.data,
-  SECURE_COOKIE: true,
+  SECURE_COOKIE: false,
 };
 
 // Reject default OAuth secrets in production.
