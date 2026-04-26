@@ -142,6 +142,40 @@ if (env.DEV_LOGIN === "true") {
   );
 }
 
+authenticator.use(
+  new FormStrategy(async ({ form, request }) => {
+    const token = form.get("token")?.toString();
+    if (!token) throw new Error("Token is required");
+
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      env.NEXT_PUBLIC_SUPABASE_URL!,
+      env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const {
+      data: { user: supabaseUser },
+      error,
+    } = await supabase.auth.getUser(token);
+    if (error || !supabaseUser) throw new Error("Invalid Supabase token");
+
+    try {
+      const context = await createContext(request);
+      const user = await db.user.createOrLoginWithDev(
+        context,
+        supabaseUser.email!
+      );
+      return {
+        userId: user.id,
+        createdAt: Date.now(),
+      };
+    } catch (e) {
+      throw new Error("Failed to sync with Webstudio user");
+    }
+  }),
+  "supabase"
+);
+
 export const findAuthenticatedUser = async (request: Request) => {
   const user = isBuilder(request)
     ? await builderAuthenticator.isAuthenticated(request)

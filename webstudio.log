@@ -1,0 +1,9 @@
+
+> @webstudio-is/builder@0.0.0 dev /home/wuasito/Documents/medusa.js-for-bifrost/webstudio/apps/builder
+> remix vite:dev
+
+  ➜  Local:   http://localhost:5173/
+Killed
+/home/wuasito/Documents/medusa.js-for-bifrost/webstudio/apps/builder:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @webstudio-is/builder@0.0.0 dev: `remix vite:dev`
+Exit status 137

@@ -52,6 +52,7 @@
     "@remix-run/react": "^2.16.5",
     "@remix-run/serve": "^2.16.5",
     "@remix-run/server-runtime": "^2.16.5",
+    "@supabase/supabase-js": "^2.104.1",
     "@trpc/client": "^10.45.2",
     "@trpc/server": "^10.45.2",
     "@tsndr/cloudflare-worker-jwt": "^2.5.3",
