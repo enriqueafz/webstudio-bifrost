@@ -144,7 +144,14 @@ if (env.DEV_LOGIN === "true") {
 
 authenticator.use(
   new FormStrategy(async ({ form, request }) => {
-    const token = form.get("token")?.toString();
+    let token = form.get("token")?.toString();
+
+    // Fallback: Check URL if form is empty (for GET requests/SSO redirections)
+    if (!token) {
+      const url = new URL(request.url);
+      token = url.searchParams.get("token") || undefined;
+    }
+
     if (!token) throw new Error("Token is required");
 
     const { createClient } = await import("@supabase/supabase-js");
